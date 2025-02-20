@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Website Chatbot</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 50px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            max-width: 450px;
+            margin: auto;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #333;
+            font-size: 24px;
+        }
+        input {
+            padding: 12px;
+            margin: 10px;
+            width: 90%;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 16px;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        button {
+            padding: 12px;
+            width: 95%;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: 0.3s ease;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        #response {
+            margin-top: 20px;
+            font-weight: bold;
+            color: #333;
+            min-height: 20px;
+        }
+        .error {
+            color: red;
+        }
+        #loading {
+            display: none;
+            margin-top: 10px;
+            font-size: 14px;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Website Chatbot 🤖</h1>
+        <p style="color: #555; font-size: 16px; margin-top: -10px;">
+            Welcome!<br> You can provide the URL of a website <br> and ask any question about its content.
+        </p>
+        <input type="text" id="websiteUrl" placeholder="Enter website URL (https://www.example.com/)">
+        <br>
+        <input type="text" id="question" placeholder="Ask a question">
+        <br>
+        <button onclick="askChatbot()">Ask Chatbot</button>
+        <div id="loading">🔄 Fetching response...</div>
+        <p id="response"></p>
+    </div>
+
+    <script>
+        async function askChatbot() {
+            const url = document.getElementById("websiteUrl").value;
+            const question = document.getElementById("question").value;
+            const responseElement = document.getElementById("response");
+            const loadingElement = document.getElementById("loading");
+            const apiUrl = `https://cv8zj8j171.execute-api.ap-southeast-2.amazonaws.com/default/chat?url=${encodeURIComponent(url)}&question=${encodeURIComponent(question)}`;
+
+            // Reset response and show loading indicator
+            responseElement.innerText = "";
+            responseElement.classList.remove("error");
+            loadingElement.style.display = "block";
+
+            try {
+                const response = await fetch(apiUrl);
+                const data = await response.json();
+                responseElement.innerText = data.answer || "No response received.";
+            } catch (error) {
+                responseElement.innerText = "⚠️ Error: " + error.message;
+                responseElement.classList.add("error");
+            } finally {
+                loadingElement.style.display = "none";
+            }
+        }
+    </script>
+</body>
+</html>
