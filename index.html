@@ -14,7 +14,7 @@
         .container {
             background: white;
             padding: 20px;
-            max-width: 450px;
+            max-width: 500px;
             margin: auto;
             border-radius: 10px;
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
@@ -23,7 +23,7 @@
             color: #333;
             font-size: 24px;
         }
-        input {
+        input, select {
             padding: 12px;
             margin: 10px;
             width: 90%;
@@ -51,6 +51,11 @@
             font-weight: bold;
             color: #333;
             min-height: 20px;
+            text-align: left;
+            white-space: pre-line;
+            padding: 10px;
+            border-radius: 5px;
+            background-color: #f9f9f9;
         }
         .error {
             color: red;
@@ -60,6 +65,47 @@
             margin-top: 10px;
             font-size: 14px;
             color: #555;
+        }
+        .advanced-options {
+            text-align: left;
+            margin: 10px;
+            padding: 10px;
+            border: 1px solid #eee;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        .advanced-options h3 {
+            margin-top: 0;
+            font-size: 16px;
+            color: #555;
+        }
+        .option-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .option-label {
+            flex: 1;
+            font-size: 14px;
+        }
+        .option-control {
+            flex: 1;
+        }
+        .toggle-advanced {
+            background: none;
+            border: none;
+            color: #007bff;
+            cursor: pointer;
+            font-size: 14px;
+            text-decoration: underline;
+            width: auto;
+            padding: 5px;
+            margin-top: 10px;
+        }
+        .toggle-advanced:hover {
+            color: #0056b3;
+            background: none;
         }
     </style>
 </head>
@@ -73,18 +119,75 @@
         <br>
         <input type="text" id="question" placeholder="Ask a question">
         <br>
+        
+        <button id="toggleAdvanced" class="toggle-advanced" onclick="toggleAdvancedOptions()">
+            Show Advanced Options ▼
+        </button>
+        
+        <div id="advancedOptions" class="advanced-options" style="display: none;">
+            <h3>Advanced Scraping Options</h3>
+            <div class="option-row">
+                <div class="option-label">Recursive Depth:</div>
+                <div class="option-control">
+                    <select id="maxDepth">
+                        <option value="1">1 (Current page only)</option>
+                        <option value="2">2 (Current page + linked pages)</option>
+                        <option value="3">3 (Deep crawl - may be slow)</option>
+                    </select>
+                </div>
+            </div>
+            <div class="option-row">
+                <div class="option-label">Max Pages:</div>
+                <div class="option-control">
+                    <select id="maxPages">
+                        <option value="5">5 pages</option>
+                        <option value="10">10 pages</option>
+                        <option value="20">20 pages</option>
+                    </select>
+                </div>
+            </div>
+            <div class="option-row">
+                <div class="option-label">JavaScript Rendering:</div>
+                <div class="option-control">
+                    <select id="handleJs">
+                        <option value="false">Disabled</option>
+                        <option value="true">Enabled (Experimental)</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        
         <button onclick="askChatbot()">Ask Chatbot</button>
-        <div id="loading">🔄 Fetching response...</div>
-        <p id="response"></p>
+        <div id="loading">🔄 Fetching response... This may take a moment for larger websites.</div>
+        <div id="response"></div>
     </div>
 
     <script>
+        function toggleAdvancedOptions() {
+            const advancedOptions = document.getElementById("advancedOptions");
+            const toggleButton = document.getElementById("toggleAdvanced");
+            
+            if (advancedOptions.style.display === "none") {
+                advancedOptions.style.display = "block";
+                toggleButton.textContent = "Hide Advanced Options ▲";
+            } else {
+                advancedOptions.style.display = "none";
+                toggleButton.textContent = "Show Advanced Options ▼";
+            }
+        }
+        
         async function askChatbot() {
             const url = document.getElementById("websiteUrl").value;
             const question = document.getElementById("question").value;
+            const maxDepth = document.getElementById("maxDepth").value;
+            const maxPages = document.getElementById("maxPages").value;
+            const handleJs = document.getElementById("handleJs").value;
+            
             const responseElement = document.getElementById("response");
             const loadingElement = document.getElementById("loading");
-            const apiUrl = `https://cv8zj8j171.execute-api.ap-southeast-2.amazonaws.com/default/chat?url=${encodeURIComponent(url)}&question=${encodeURIComponent(question)}`;
+            
+            // Build the API URL with all parameters
+            const apiUrl = `https://cv8zj8j171.execute-api.ap-southeast-2.amazonaws.com/default/chat?url=${encodeURIComponent(url)}&question=${encodeURIComponent(question)}&max_depth=${maxDepth}&max_pages=${maxPages}&handle_js=${handleJs}`;
 
             // Reset response and show loading indicator
             responseElement.innerText = "";

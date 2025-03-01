@@ -9,7 +9,9 @@ A **serverless AI chatbot** that allows users to enter a **website URL** and ask
 
 ## 📌 Features  
 
-✅ **Scrape Website Content**: Extracts text content from a given website using `BeautifulSoup`  
+✅ **Enhanced Web Scraping**: Extracts comprehensive content including headings, paragraphs, lists, and tables  
+✅ **Recursive Scraping**: Crawls linked pages within the same domain for more comprehensive information  
+✅ **JavaScript Support**: Experimental support for JavaScript-rendered content  
 ✅ **AI-Powered Responses**: Uses `LangChain` and `OpenAI` GPT-4o-mini to answer user questions based on scraped content  
 ✅ **Serverless Deployment**: Deployed using **AWS Lambda** & exposed via **API Gateway**  
 ✅ **Static Web UI**: Hosted on **AWS S3** for a lightweight user interface  
@@ -21,13 +23,14 @@ A **serverless AI chatbot** that allows users to enter a **website URL** and ask
 
 ```
 [User] --> [AWS S3 (Static UI)] --> [AWS API Gateway] --> [AWS Lambda] --> [LangChain + OpenAI]  
-                                                   ↳ [BeautifulSoup Scraper]
+                                                   ↳ [Enhanced BeautifulSoup Scraper]
 ```
 
 - **Frontend**: Simple `HTML + JavaScript` frontend hosted on **S3**
 - **API**: AWS **API Gateway** routes requests to **Lambda**
 - **Backend Logic**:
-  - **Scrapes** website content via `requests` + `BeautifulSoup`
+  - **Scrapes** website content via `requests` + `BeautifulSoup` with enhanced extraction
+  - **Recursively crawls** linked pages for comprehensive information
   - **Processes** user query using `LangChain` + `GPT-4o-mini`
   - **Returns** AI-generated response via API  
 
@@ -39,7 +42,7 @@ A **serverless AI chatbot** that allows users to enter a **website URL** and ask
 |------------|-------|
 | **LangChain** | Handles LLM interactions with OpenAI |
 | **OpenAI API (GPT-4o-mini)** | Processes natural language queries |
-| **BeautifulSoup** | Scrapes text content from websites |
+| **BeautifulSoup** | Enhanced scraping of text content from websites |
 | **AWS Lambda** | Serverless backend function |
 | **AWS API Gateway** | Routes HTTP requests to Lambda |
 | **AWS S3** | Hosts the static HTML frontend |
@@ -52,8 +55,8 @@ A **serverless AI chatbot** that allows users to enter a **website URL** and ask
 
 ```
 📁 aws_lambda_chatbot
-👀 ├── 📝 lambda_function.py        # AWS Lambda function (backend)
-👀 ├── 📝 index.html                # Frontend UI (hosted on S3)
+👀 ├── 📝 lambda_function.py        # AWS Lambda function (backend) with enhanced scraping
+👀 ├── 📝 index.html                # Frontend UI with advanced options (hosted on S3)
 👀 ├── 📁 package/                   # Python dependencies (for AWS Lambda)
 👀 ├── 📝 output.txt                 # Lambda logs (for debugging)
 👀 ├── 📝 .gitignore                 # Ignore unnecessary files
@@ -140,14 +143,18 @@ aws s3api put-object-acl --bucket website-chatbot-ui --key index.html --acl publ
 1. Open **[Website Chatbot UI](https://website-chatbot-ui.s3-website-ap-southeast-2.amazonaws.com/)**
 2. Enter a **Website URL**
 3. Type a **Question** about the website content
-4. Click **"Ask Chatbot"**
-5. Get an AI-generated response!
+4. (Optional) Configure **Advanced Options**:
+   - **Recursive Depth**: Control how deep the crawler should go (1-3 levels)
+   - **Max Pages**: Limit the number of pages to scrape (5-20)
+   - **JavaScript Rendering**: Enable experimental support for JS-rendered content
+5. Click **"Ask Chatbot"**
+6. Get an AI-generated response!
 
 ---
 
 ### **Backend (API Testing via `curl`)**
 ```bash
-curl "https://YOUR-API-ID.execute-api.ap-southeast-2.amazonaws.com/default/chat?url=https://example.com&question=What%20is%20this%20website%20about?"
+curl "https://YOUR-API-ID.execute-api.ap-southeast-2.amazonaws.com/default/chat?url=https://example.com&question=What%20is%20this%20website%20about?&max_depth=2&max_pages=10&handle_js=false"
 ```
 
 Expected Response:
@@ -166,6 +173,8 @@ Expected Response:
 | **CORS Error** | Ensure API Gateway has `Access-Control-Allow-Origin: *` in responses |
 | **Lambda Import Errors** | Make sure all dependencies are included in `package/` before zipping |
 | **Failed to Fetch API** | Check if API Gateway **Stage Name** is correctly set in `index.html` |
+| **Slow Response Times** | Reduce `max_depth` and `max_pages` values for faster responses |
+| **JavaScript Rendering Issues** | JavaScript rendering is experimental; try with `handle_js=false` |
 
 ---
 
