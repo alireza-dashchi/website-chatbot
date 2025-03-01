@@ -59,25 +59,17 @@ def scrape_website(url, max_depth=1, max_pages=5, handle_js=False):
     """
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"}
     
-    # For JavaScript rendering, we would use a headless browser
-    # Since AWS Lambda has limitations with browser automation,
-    # we'll implement a simplified version that can be expanded later
-    if handle_js:
-        try:
-            # This is a placeholder for JavaScript rendering
-            # In a real implementation, you would use a service like AWS Lambda Layers
-            # to include Selenium/Playwright or use a separate service like Browserless
-            return "JavaScript rendering is not supported in this version. Please upgrade to enable this feature."
-        except Exception as e:
-            return f"Error with JavaScript rendering: {str(e)}"
+    # Set for visited URLs to avoid duplicates
+    visited_urls = set()
+    all_content = []
     
-    # For regular scraping
+    # Add a note about JavaScript rendering if requested
+    if handle_js:
+        all_content.append("Note: Full JavaScript rendering is not supported in this version. Some dynamic content may not be captured.")
+    
+    urls_to_visit = [(url, 0)]  # (url, depth)
+    
     try:
-        # Set for visited URLs to avoid duplicates
-        visited_urls = set()
-        all_content = []
-        urls_to_visit = [(url, 0)]  # (url, depth)
-        
         while urls_to_visit and len(visited_urls) < max_pages:
             current_url, depth = urls_to_visit.pop(0)
             
@@ -86,36 +78,40 @@ def scrape_website(url, max_depth=1, max_pages=5, handle_js=False):
                 
             visited_urls.add(current_url)
             
-            response = requests.get(current_url, headers=headers, timeout=10)
-            response.raise_for_status()
-            
-            soup = BeautifulSoup(response.text, "html.parser")
-            content = extract_content(soup)
-            
-            if content:
-                all_content.append(f"--- Content from {current_url} ---")
-                all_content.append(content)
-            
-            # If we haven't reached max depth, add links to queue
-            if depth < max_depth:
-                links = soup.find_all('a', href=True)
-                for link in links:
-                    href = link['href']
-                    # Skip fragment links and non-HTTP links
-                    if href.startswith('#') or not (href.startswith('http') or href.startswith('/')):
-                        continue
-                    
-                    # Convert relative URLs to absolute
-                    absolute_url = urljoin(current_url, href)
-                    
-                    # Only process links from the same domain
-                    if is_same_domain(absolute_url, url) and absolute_url not in visited_urls:
-                        urls_to_visit.append((absolute_url, depth + 1))
+            try:
+                response = requests.get(current_url, headers=headers, timeout=10)
+                response.raise_for_status()
+                
+                soup = BeautifulSoup(response.text, "html.parser")
+                content = extract_content(soup)
+                
+                if content:
+                    all_content.append(f"--- Content from {current_url} ---")
+                    all_content.append(content)
+                
+                # If we haven't reached max depth, add links to queue
+                if depth < max_depth:
+                    links = soup.find_all('a', href=True)
+                    for link in links:
+                        href = link['href']
+                        # Skip fragment links and non-HTTP links
+                        if href.startswith('#') or not (href.startswith('http') or href.startswith('/')):
+                            continue
+                        
+                        # Convert relative URLs to absolute
+                        absolute_url = urljoin(current_url, href)
+                        
+                        # Only process links from the same domain
+                        if is_same_domain(absolute_url, url) and absolute_url not in visited_urls:
+                            urls_to_visit.append((absolute_url, depth + 1))
+            except requests.exceptions.RequestException as e:
+                all_content.append(f"Error fetching {current_url}: {str(e)}")
+                continue
         
         combined_content = "\n\n".join(all_content)
         return combined_content if combined_content else "No readable text found on this website."
     
-    except requests.exceptions.RequestException as e:
+    except Exception as e:
         return f"Error fetching the website: {str(e)}"
 
 def lambda_handler(event, context):
@@ -157,7 +153,12 @@ def lambda_handler(event, context):
     website_content = scrape_website(website_url, max_depth, max_pages, handle_js)
     
     # Initialize ChatGPT
-    llm = ChatOpenAI(model="gpt-4o", openai_api_key=OPENAI_API_KEY)
+    try:
+        llm = ChatOpenAI(model="gpt-4o-mini", openai_api_key=OPENAI_API_KEY)
+    except Exception:
+        # Fallback to gpt-3.5-turbo if gpt-4o-mini is not available
+        llm = ChatOpenAI(model="gpt-3.5-turbo", openai_api_key=OPENAI_API_KEY)
+        
     prompt = f"Here is the content of the website:\n\n{website_content}\n\nNow answer this question: {question}"
 
     try:
