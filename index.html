@@ -14,7 +14,7 @@
         .container {
             background: white;
             padding: 20px;
-            max-width: 500px;
+            max-width: 700px;
             margin: 50px auto;
             border-radius: 10px;
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
@@ -31,9 +31,9 @@
             background: #f8f8fa;
             border-radius: 10px;
             min-height: 220px;
-            max-height: 320px;
+            max-height: 400px;
             overflow-y: auto;
-            padding: 16px 8px 8px 8px;
+            padding: 16px 16px 40px 16px; /* more side and bottom padding */
             margin-bottom: 16px;
             display: flex;
             flex-direction: column;
@@ -45,7 +45,7 @@
             align-items: flex-end;
         }
         .message-bubble {
-            max-width: 75%;
+            max-width: 85%;
             padding: 14px 18px;
             font-size: 16px;
             word-break: break-word;
@@ -172,12 +172,21 @@
             color: #aaa;
             padding: 6px 0 0 0;
         }
+        @media (max-width: 900px) {
+            .container {
+                max-width: 98vw;
+            }
+        }
         @media (max-width: 600px) {
             .container {
                 max-width: 100vw;
                 margin: 0;
                 border-radius: 0;
                 box-shadow: none;
+            }
+            .chat-area {
+                max-height: 300px;
+                padding: 8px 2vw 40px 2vw;
             }
         }
     </style>
@@ -261,18 +270,25 @@
 
         function renderChat() {
             chatArea.innerHTML = '';
-            chatHistory.forEach(msg => {
+            let lastUserMsg = null;
+            chatHistory.forEach((msg, idx) => {
                 const row = document.createElement('div');
                 row.className = 'message-row';
                 if (msg.sender === 'user') {
                     row.innerHTML = `<div style='flex:1'></div><div class='message-bubble user'>${msg.text.replace(/\n/g, '<br>')}</div>`;
+                    lastUserMsg = row;
                 } else {
                     // Render Markdown for bot messages
                     row.innerHTML = `<div class='avatar'>🤖</div><div class='message-bubble bot'>${marked.parse(msg.text)}</div>`;
                 }
                 chatArea.appendChild(row);
             });
-            chatArea.scrollTop = chatArea.scrollHeight;
+            // Scroll so last user message is at the top of the visible area (if exists), else scroll to bottom
+            if (lastUserMsg) {
+                lastUserMsg.scrollIntoView({block: 'start', behavior: 'smooth'});
+            } else {
+                chatArea.scrollTop = chatArea.scrollHeight;
+            }
         }
 
         function toggleAdvancedOptions() {
