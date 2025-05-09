@@ -18,6 +18,9 @@
             margin: 50px auto;
             border-radius: 10px;
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            min-height: 80vh;
         }
         h1 {
             color: #333;
@@ -35,6 +38,7 @@
             display: flex;
             flex-direction: column;
             gap: 10px;
+            flex: 1;
         }
         .message-row {
             display: flex;
@@ -42,11 +46,13 @@
         }
         .message-bubble {
             max-width: 75%;
-            padding: 12px 16px;
-            font-size: 15px;
+            padding: 14px 18px;
+            font-size: 16px;
             word-break: break-word;
             box-shadow: 0 1px 2px rgba(0,0,0,0.03);
             margin-bottom: 2px;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            line-height: 1.6;
         }
         .message-bubble.user {
             background: #007bff;
@@ -80,7 +86,21 @@
             gap: 8px;
             margin-bottom: 10px;
         }
+        .bottom-input-row {
+            display: flex;
+            gap: 8px;
+            padding: 12px 0 0 0;
+            border-top: 1px solid #ececec;
+            background: #fff;
+        }
         input, select {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 15px;
+            flex: 1;
+        }
+        .bottom-input {
             padding: 10px;
             border: 1px solid #ccc;
             border-radius: 5px;
@@ -161,6 +181,8 @@
             }
         }
     </style>
+    <!-- Add marked.js for Markdown rendering -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
 <body>
     <div class="container">
@@ -168,58 +190,74 @@
         <p style="color: #555; font-size: 16px; margin-top: -10px;">
             Welcome!<br> You can provide the URL of a website <br> and ask any question about its content.
         </p>
-        <div class="input-row">
-            <input type="text" id="websiteUrl" placeholder="Enter website URL (https://www.example.com/)" />
-        </div>
-        <div class="input-row">
-            <input type="text" id="question" placeholder="Ask a question" />
-            <button onclick="askChatbot()">Ask</button>
-        </div>
-        <button id="toggleAdvanced" class="toggle-advanced" onclick="toggleAdvancedOptions()">
-            Show Advanced Options ▼
-        </button>
-        <div id="advancedOptions" class="advanced-options" style="display: none;">
-            <h3>Advanced Scraping Options</h3>
-            <div class="option-row">
-                <div class="option-label">Recursive Depth:</div>
-                <div class="option-control">
-                    <select id="maxDepth">
-                        <option value="1">1 (Current page only)</option>
-                        <option value="2">2 (Current page + linked pages)</option>
-                        <option value="3">3 (Deep crawl - may be slow)</option>
-                    </select>
-                </div>
+        <div id="initialInputSection">
+            <div class="input-row">
+                <input type="text" id="websiteUrl" placeholder="Enter website URL (https://www.example.com/)" />
             </div>
-            <div class="option-row">
-                <div class="option-label">Max Pages:</div>
-                <div class="option-control">
-                    <select id="maxPages">
-                        <option value="5">5 pages</option>
-                        <option value="10">10 pages</option>
-                        <option value="20">20 pages</option>
-                    </select>
-                </div>
+            <div class="input-row">
+                <input type="text" id="question" placeholder="Ask a question" />
+                <button onclick="askChatbot()">Ask</button>
             </div>
-            <div class="option-row">
-                <div class="option-label">JavaScript Rendering:</div>
-                <div class="option-control">
-                    <select id="handleJs">
-                        <option value="false">Disabled</option>
-                        <option value="true">Enabled (Experimental)</option>
-                    </select>
+            <button id="toggleAdvanced" class="toggle-advanced" onclick="toggleAdvancedOptions()">
+                Show Advanced Options ▼
+            </button>
+            <div id="advancedOptions" class="advanced-options" style="display: none;">
+                <h3>Advanced Scraping Options</h3>
+                <div class="option-row">
+                    <div class="option-label">Recursive Depth:</div>
+                    <div class="option-control">
+                        <select id="maxDepth">
+                            <option value="1">1 (Current page only)</option>
+                            <option value="2">2 (Current page + linked pages)</option>
+                            <option value="3">3 (Deep crawl - may be slow)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="option-row">
+                    <div class="option-label">Max Pages:</div>
+                    <div class="option-control">
+                        <select id="maxPages">
+                            <option value="5">5 pages</option>
+                            <option value="10">10 pages</option>
+                            <option value="20">20 pages</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="option-row">
+                    <div class="option-label">JavaScript Rendering:</div>
+                    <div class="option-control">
+                        <select id="handleJs">
+                            <option value="false">Disabled</option>
+                            <option value="true">Enabled (Experimental)</option>
+                        </select>
+                    </div>
                 </div>
             </div>
         </div>
         <div class="chat-area" id="chatArea">
             <!-- Chat messages will appear here -->
         </div>
+        <div id="bottomInputSection" style="display:none;">
+            <form onsubmit="return sendBottomMessage();" class="bottom-input-row">
+                <input type="text" id="bottomQuestion" class="bottom-input" placeholder="Type your message..." autocomplete="off" />
+                <button type="submit">Send</button>
+            </form>
+        </div>
         <div id="loading" class="loading" style="display:none;">🔄 Fetching response...</div>
         <div class="branding">Website Chatbot &copy; 2024</div>
     </div>
     <script>
         let chatHistory = [];
+        let chatMode = false; // false = initial, true = chat mode
+        let lastWebsiteUrl = '';
+        let cachedWebsiteContent = null;
         const chatArea = document.getElementById('chatArea');
         const loadingEl = document.getElementById('loading');
+        const initialInputSection = document.getElementById('initialInputSection');
+        const bottomInputSection = document.getElementById('bottomInputSection');
+        const websiteUrlInput = document.getElementById('websiteUrl');
+        const questionInput = document.getElementById('question');
+        const bottomQuestionInput = document.getElementById('bottomQuestion');
 
         function renderChat() {
             chatArea.innerHTML = '';
@@ -229,7 +267,8 @@
                 if (msg.sender === 'user') {
                     row.innerHTML = `<div style='flex:1'></div><div class='message-bubble user'>${msg.text.replace(/\n/g, '<br>')}</div>`;
                 } else {
-                    row.innerHTML = `<div class='avatar'>🤖</div><div class='message-bubble bot'>${msg.text.replace(/\n/g, '<br>')}</div>`;
+                    // Render Markdown for bot messages
+                    row.innerHTML = `<div class='avatar'>🤖</div><div class='message-bubble bot'>${marked.parse(msg.text)}</div>`;
                 }
                 chatArea.appendChild(row);
             });
@@ -249,20 +288,43 @@
         }
 
         async function askChatbot() {
-            const url = document.getElementById("websiteUrl").value;
-            const question = document.getElementById("question").value;
+            const url = websiteUrlInput.value.trim();
+            const question = questionInput.value.trim();
             const maxDepth = document.getElementById("maxDepth").value;
             const maxPages = document.getElementById("maxPages").value;
             const handleJs = document.getElementById("handleJs").value;
             if (!url || !question) return;
+            // If website changed, reset chat and cache
+            if (url !== lastWebsiteUrl) {
+                chatHistory = [];
+                cachedWebsiteContent = null;
+            }
             chatHistory.push({ sender: 'user', text: question });
             renderChat();
             loadingEl.style.display = 'block';
             try {
-                const apiUrl = `https://cv8zj8j171.execute-api.ap-southeast-2.amazonaws.com/default/chat?url=${encodeURIComponent(url)}&question=${encodeURIComponent(question)}&max_depth=${maxDepth}&max_pages=${maxPages}&handle_js=${handleJs}`;
+                let apiUrl;
+                if (!cachedWebsiteContent) {
+                    // First fetch for this website
+                    apiUrl = `https://cv8zj8j171.execute-api.ap-southeast-2.amazonaws.com/default/chat?url=${encodeURIComponent(url)}&question=${encodeURIComponent(question)}&max_depth=${maxDepth}&max_pages=${maxPages}&handle_js=${handleJs}`;
+                } else {
+                    // Use cached content, send as a special param
+                    apiUrl = `https://cv8zj8j171.execute-api.ap-southeast-2.amazonaws.com/default/chat?url=${encodeURIComponent(url)}&question=${encodeURIComponent(question)}&use_cache=true`;
+                }
                 const response = await fetch(apiUrl);
                 const data = await response.json();
+                if (!cachedWebsiteContent && data.website_content) {
+                    cachedWebsiteContent = data.website_content;
+                }
                 chatHistory.push({ sender: 'bot', text: data.answer || 'No response received.' });
+                lastWebsiteUrl = url;
+                // Switch to chat mode after first chat
+                if (!chatMode) {
+                    chatMode = true;
+                    initialInputSection.style.display = 'none';
+                    bottomInputSection.style.display = 'block';
+                    setTimeout(() => { bottomQuestionInput.focus(); }, 100);
+                }
             } catch (error) {
                 chatHistory.push({ sender: 'bot', text: '⚠️ Error: ' + error.message });
             } finally {
@@ -270,6 +332,46 @@
                 renderChat();
             }
         }
+
+        // Handler for bottom chat input
+        function sendBottomMessage() {
+            const question = bottomQuestionInput.value.trim();
+            if (!question) return false;
+            // If website changed in the background, reset
+            const url = lastWebsiteUrl;
+            chatHistory.push({ sender: 'user', text: question });
+            renderChat();
+            loadingEl.style.display = 'block';
+            // Always use cache for follow-up questions
+            const apiUrl = `https://cv8zj8j171.execute-api.ap-southeast-2.amazonaws.com/default/chat?url=${encodeURIComponent(url)}&question=${encodeURIComponent(question)}&use_cache=true`;
+            fetch(apiUrl)
+                .then(response => response.json())
+                .then(data => {
+                    chatHistory.push({ sender: 'bot', text: data.answer || 'No response received.' });
+                    renderChat();
+                })
+                .catch(error => {
+                    chatHistory.push({ sender: 'bot', text: '⚠️ Error: ' + error.message });
+                    renderChat();
+                })
+                .finally(() => {
+                    loadingEl.style.display = 'none';
+                });
+            bottomQuestionInput.value = '';
+            return false;
+        }
+
+        // Reset UI if website URL changes (user can reload page to start over)
+        websiteUrlInput.addEventListener('input', function() {
+            if (chatMode && websiteUrlInput.value.trim() !== lastWebsiteUrl) {
+                chatMode = false;
+                chatHistory = [];
+                cachedWebsiteContent = null;
+                initialInputSection.style.display = 'block';
+                bottomInputSection.style.display = 'none';
+                renderChat();
+            }
+        });
     </script>
 </body>
 </html>
